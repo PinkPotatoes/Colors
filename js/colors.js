@@ -12,19 +12,20 @@ var BLUE_COLOR 	  = 0x4a90e2;
 var backgroundColor = RED;
 
 // The Phaser Game
-var game = new Phaser.Game(400, 300, Phaser.AUTO, 'game', { preload: preload, create: create, update: update});
+var game = new Phaser.Game(800, 600, Phaser.AUTO, 'game', { preload: preload, create: create, update: update});
 
 function preload() {
 	// Preload Images
-	game.load.spritesheet('player', 'assets/player.png', 32, 32);
+	game.load.spritesheet('player', 'assets/player.png', 64, 64);
 	game.load.image('circle', 'assets/circle.png');
 	game.load.image('platform', 'assets/platform.png');
 	game.load.image('ground', 'assets/ground.png');
 }
 
-var player;
+var ground;
 var circles;
 var platforms;
+var player;
 
 
 //  Our controls.
@@ -38,15 +39,18 @@ function create() {
 	platforms = game.add.group();
 	platforms.enableBody = true;
 		// Ground
-	var ground = platforms.create(0, game.world.height-16, 'ground');
+	//var ground = platforms.create(0, game.world.height-16, 'ground');
+	ground = game.add.sprite(0, game.world.height-16, 'ground');
+	game.physics.enable(ground, Phaser.Physics.ARCADE);
 	ground.body.immovable= true;
 	ground.color = WHITE;
 		//Platforms
 	var platform = platforms.create(100, 100, 'platform');
 	platform.color = RED;
+	platform.body.immovable;
 	
 	// Player
-	player = game.add.sprite(50, game.world.height-50, 'player');
+	player = game.add.sprite(50, game.world.height-100, 'player');
 	game.physics.arcade.enable(player);
 	player.body.bounce.y = 0;
 	player.body.gravity.y = 300;
@@ -65,10 +69,10 @@ function create() {
 
 function update() {
 	// Collisions
-	game.physics.arcade.collide(player, platforms);
-	game.physics.arcade.collide(circles, platforms);
-	
+	game.physics.arcade.collide(player, ground);
+	game.physics.arcade.collide(circles, ground);	
 	game.physics.arcade.overlap(player, circles, collideCircle, null, this);
+	checkCollisions();
 	
 	// Player movement
 	player.body.velocity.x = 0;
@@ -107,16 +111,62 @@ function update() {
 	
 	// Show colors
 	colorGame();
+	
+	updatePlatforms();
 }
 
+// Collsions
+function checkCollisions() {
+	for (var i=0; i<platforms.length; i++) {
+		var platform = platforms.getAt(i);
+		if (platform.color == backgroundColor) continue;
+		//Circles
+		for (var j=0; j<circles.length; j++) {
+			var circle = circles.getAt(j);
+			if (circle.color != backgroundColor) {
+				game.physics.arcade.collide(platform, circle);
+			}
+		}
+		//Player
+		game.physics.arcade.collide(platform, player);
+	}
+}
+
+// Circle Functions
 function addCircle() {
 	var c = game.rnd.integerInRange(1,3);
-	var x = game.rnd.integerInRange(0, 800);
-	var circle = circles.create(x, 100, 'circle');
+	var x = game.rnd.integerInRange(0, game.world.width);
+	var circle = circles.create(x, 0, 'circle');
 	circle.color = c;
 	circle.body.gravity.y = 300;
 }
 
+// Platform Functions
+function addPlatform() {
+	if (platforms.length < 2) {
+		var w = game.world.height - 50;
+		var y = game.rnd.integerInRange(25, 25+w);
+		var c = game.rnd.integerInRange(1,3);
+		var platform = platforms.create(game.world.width+256, y, 'platform');
+		platform.color = c;
+		platform.body.immovable = true;
+	}
+}
+function destroyPlatform(platform) {
+	if (platform.body.x < -256) {
+		platform.destroy();
+	}
+}
+function updatePlatforms() {
+	for (var i=0; i<platforms.length; i++) {
+		var platform = platforms.getAt(i);
+		platform.body.x -= 1;
+		destroyPlatform(platform);
+	}
+	addPlatform();
+}
+
+// Colors the Game
 function colorGame() {
 	// Circles
 	for(var i=0; i<circles.length; i++) {
